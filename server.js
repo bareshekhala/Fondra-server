@@ -1,0 +1,40 @@
+//  Loads environment variables from a .env file into process.env
+try {
+  process.loadEnvFile()
+} catch(error) {
+  console.warn(".env file not found, using default environment values")
+}
+const express = require('express');
+const app = express();
+
+// Loads and applies global middleware (CORS, JSON parsing, etc.) for server configurations
+const config = require("./config")
+config(app);
+
+//Middleware that establishes a database connection. Ensures the connection is created on every request. Required for serverless deployments.
+const connectDB = require("./db");
+app.use(async (req, res, next) => {
+  await connectDB()
+  next()
+})
+
+// Test Route. Can be left and used for waking up the server if idle
+app.get("/", (req, res, next) => {
+  res.json("All good in here");
+});
+
+// Defines and applies route handlers
+const indexRouter = require("./routes/index.routes");
+app.use("/api", indexRouter);
+
+// ❗ Centralized error handling (must be placed after routes)
+const handleErrors = require("./errors")
+handleErrors(app);
+
+// ℹ️ Defines the server port (default: 8008)
+const PORT = process.env.PORT || 8008;
+
+// Optional for serverless deployments like Vercel.
+app.listen(PORT, () => {
+  console.log(`Server listening. Local access on http://localhost:${PORT}`);
+});
