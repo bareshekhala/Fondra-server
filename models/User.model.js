@@ -52,9 +52,6 @@ const userSchema = new Schema(
     statusNote: { 
         type: String, default: "", maxlength: 140 
     },
-    statusSetAt: { 
-        type: Date, default: null 
-    },
   },
   {
     timestamps: true,
@@ -89,7 +86,6 @@ userSchema.methods.toPublic = function () {
     lastCheckIn: this.lastCheckIn,
     status: this.status,
     statusNote: this.statusNote,
-    statusSetAt: this.statusSetAt,
   }
 }
 const User = model("User", userSchema);

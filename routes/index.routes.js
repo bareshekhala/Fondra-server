@@ -7,5 +7,7 @@ const { verifyToken } = require("../middlewares/auth.middlewares.js")
 const authRouter = require("./auth.routes.js")
 router.use("/auth", authRouter)
 
+const checkinRouter = require("./checkIn.routes.js")
+router.use("/checkins",checkinRouter)
 
 module.exports = router

@@ -48,14 +48,12 @@ router.post("/signup", async (req, res, next) => {
     }
 
     // Password strength
-    const passwordRegex =
-      /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[a-zA-Z]).{8,}$/;
+    const passwordRegex = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[a-zA-Z]).{8,}$/;
 
     if (!passwordRegex.test(password)) {
       return res.status(400).json({
         errorMessage:
           "Password not strong enough. Needs at least 8 characters, one uppercase, one lowercase and one number",
-        field: "password",
       });
     }
 
@@ -87,7 +85,7 @@ router.post("/signup", async (req, res, next) => {
 
       // Make sure the user did not invite herself
       if (sender && String(sender._id) !== String(user._id)) {
-        // Create the connection
+        // Create the Connection between them
         await Connection.create({
           requester: sender._id,
           recipient: user._id,
@@ -146,13 +144,9 @@ router.post("/login", async (req, res, next) => {
     };
 
     // Create JWT
-    const authToken = jwt.sign(
-      payload,
-      process.env.TOKEN_SECRET,
-      {
-        expiresIn: "7d",
-      }
-    );
+    const authToken = jwt.sign(payload, process.env.TOKEN_SECRET, {
+      expiresIn: "7d",
+    });
 
     res.status(200).json({
       authToken,

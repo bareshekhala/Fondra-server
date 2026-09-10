@@ -17,12 +17,7 @@ const checkInSchema = new Schema(
       default: "",
       maxlength: 140,
     },
-    slot: {
-      type: String,
-      enum: ["morning", "evening"],
-      required: true,
-    },
-
+    
     localDate: {
       type: String,
       required: true,
