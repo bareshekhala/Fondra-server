@@ -10,4 +10,7 @@ router.use("/auth", authRouter)
 const checkinRouter = require("./checkIn.routes.js")
 router.use("/checkins",checkinRouter)
 
+const pokesRouter = require("./poke.routes.js")
+router.use("/pokes",pokesRouter)
+
 module.exports = router

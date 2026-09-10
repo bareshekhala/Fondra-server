@@ -13,9 +13,18 @@ const pokeSchema = new Schema(
       required: true,
       index: true,
     },
-    kind: { type: String, enum: ["poke", "wilt"], default: "poke" },
-    answeredAt: { type: Date, default: null },
-    seenAt: { type: Date, default: null },
+    answeredAt: {
+      type: Date,
+      default: null,
+    },
+    seenAt: {
+      type: Date,
+      default: null,
+    },
+    localDate: {
+      type: String,
+      required: true,
+    },
   },
   { timestamps: true },
 );
