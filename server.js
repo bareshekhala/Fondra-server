@@ -8,11 +8,11 @@ const express = require('express');
 const app = express();
 
 // Loads and applies global middleware (CORS, JSON parsing, etc.) for server configurations
-const config = require("./config")
+const config = require("./config/index.js")
 config(app);
 
 //Middleware that establishes a database connection. Ensures the connection is created on every request. Required for serverless deployments.
-const connectDB = require("./db");
+const connectDB = require("./db/index.js");
 app.use(async (req, res, next) => {
   await connectDB()
   next()
@@ -28,7 +28,7 @@ const indexRouter = require("./routes/index.routes");
 app.use("/api", indexRouter);
 
 // ❗ Centralized error handling (must be placed after routes)
-const handleErrors = require("./errors")
+const handleErrors = require("./errors/error")
 handleErrors(app);
 
 // ℹ️ Defines the server port (default: 8008)

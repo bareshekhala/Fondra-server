@@ -1,9 +1,9 @@
 const express = require("express");
 
-//Logs incoming requests and responses to the terminal (useful for debugging)
+// ℹ️ Logs incoming requests and responses to the terminal (useful for debugging)
 const logger = require("morgan");
 
-//Allows the server to accept requests from different origins (e.g., frontend apps)
+// ℹ️ Allows the server to accept requests from different origins (e.g., frontend apps)
 // CORS (Cross-Origin Resource Sharing) enables secure cross-origin requests.
 const cors = require("cors");
 

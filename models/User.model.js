@@ -63,11 +63,10 @@ const userSchema = new Schema(
 
 //we want each user to has her own link so she can invite other people
 // pre => this run first before anything else and Mongoose validates the user first
-userSchema.pre('validate', function (next) {
+userSchema.pre('validate', function () {
   if (!this.inviteCode) {
     this.inviteCode = crypto.randomBytes(6).toString('hex')
   }
-  next()
 })
 
 //changing the user password to a passwordHash
