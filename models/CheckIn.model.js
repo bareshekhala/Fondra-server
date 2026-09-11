@@ -17,7 +17,7 @@ const checkInSchema = new Schema(
       default: "",
       maxlength: 140,
     },
-    
+
     localDate: {
       type: String,
       required: true,
@@ -26,7 +26,7 @@ const checkInSchema = new Schema(
   { timestamps: true },
 );
 
-checkInSchema.index({ user: 1, localDate: 1, slot: 1 });
+checkInSchema.index({ user: 1, localDate: 1 });
 
 const CheckIn = model("CheckIn", checkInSchema);
 module.exports = CheckIn;

@@ -13,14 +13,18 @@ const pokeSchema = new Schema(
       required: true,
       index: true,
     },
-    answeredAt: {
+
+    kind: {
+      type: String,
+      enum: ["poke", "wilt"],
+      default: "poke",
+    },
+
+    plantedAt: {
       type: Date,
       default: null,
     },
-    seenAt: {
-      type: Date,
-      default: null,
-    },
+    
     localDate: {
       type: String,
       required: true,

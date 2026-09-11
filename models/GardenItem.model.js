@@ -20,6 +20,7 @@ const gardenItemSchema = new Schema(
       enum: speciesType,
       required: true,
     },
+    
     // normalised position inside the plot, 0 to 1, so the scene can reflow
     // with the screen size instead of breaking at a fixed pixel width
     x: {
@@ -34,6 +35,7 @@ const gardenItemSchema = new Schema(
       min: 0,
       max: 1,
     },
+    
   },
   { timestamps: true },
 );

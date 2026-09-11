@@ -11,6 +11,12 @@ router.post("/:userId", verifyToken, async (req, res, next) => {
     const { userId } = req.params;
     const { localDate } = req.body; //this is needed for counting the pokes in a day
 
+    if (!localDate) {
+      return res.status(400).json({
+        message: "Date is required",
+      });
+    }
+    
     // check if users are connected
     const connection = await Connection.findOne({
       status: "accepted",
@@ -44,7 +50,6 @@ router.post("/:userId", verifyToken, async (req, res, next) => {
         message: "You can poke this person up to 5 times a day",
       });
     }
-
 
     // create a poke
     const poke = await Poke.create({

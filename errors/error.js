@@ -7,7 +7,7 @@ function handleErrors(app) {
     res.status(404).json({ message: "This route does not exist" });
   });
 
-  // ℹ️ Centralized generic error handling middleware. whenever you call next(error), this middleware will handle the error
+  // Centralized generic error handling middleware. whenever you call next(error), this middleware will handle the error
   app.use((err, req, res, next) => {
 
     // always logs the error

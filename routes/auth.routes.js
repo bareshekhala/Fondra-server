@@ -165,4 +165,44 @@ router.get("/verify", verifyToken, (req, res) => {
   });
 });
 
+
+
+const statusType = ["okay", "busy", "low", "need_checkins"];
+//Put -> /api/auth/status
+router.put("/status", verifyToken, async (req, res, next) => {
+
+  try {
+    const { status, statusNote = "" } = req.body;
+
+    if (!statusType.includes(status)) {
+      return res.status(400).json({ message: "Pick one of the available statuses" });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.payload._id,
+      { status, statusNote: statusNote.slice(0, 140) },
+      { new: true },
+    );
+
+    res.status(200).json({ user: user.toPublic() });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// DELETE /api/auth/delete-account
+ router.delete("/delete-account", verifyToken, async (req, res, next) => {
+  try {
+    const userId = req.payload._id;
+
+    await User.findByIdAndDelete(userId);
+
+    res.status(200).json({
+      message: "Account deleted successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;
