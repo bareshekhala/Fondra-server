@@ -1,11 +1,11 @@
 const { Schema, model } = require("mongoose");
+
 const checkInSchema = new Schema(
   {
     user: {
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      index: true,
     },
     mood: {
       type: String,
@@ -16,6 +16,20 @@ const checkInSchema = new Schema(
       type: String,
       default: "",
       maxlength: 140,
+    },
+    social: {
+      type: String,
+      enum: [
+        "",
+        "Need space",
+        "Social battery is low",
+        "Just open to be poked",
+        "Chat only",
+        "Chat & call",
+        "Let's hang out",
+        "Let's party",
+      ],
+      default: "",
     },
 
     localDate: {

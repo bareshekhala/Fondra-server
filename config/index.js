@@ -12,7 +12,7 @@ function config(app) {
   // ℹ️ Enables Express to trust reverse proxies (e.g., when deployed behind services like Heroku or Vercel)
   app.set("trust proxy", 1);
   
-  // ℹ️ Configures CORS to allow requests only from the specified origin
+  // Configures CORS to allow requests only from the specified origin
   app.use(
     cors({
       origin: [process.env.ORIGIN]

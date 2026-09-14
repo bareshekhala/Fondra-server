@@ -5,11 +5,11 @@ const Poke = require("../models/Poke.model.js");
 const Connection = require("../models/Connection.model.js");
 const verifyToken = require("../middlewares/auth.middlewares");
 
-//Post /api/pokes/:userId
+//Post -> /api/pokes/:userId
 router.post("/:userId", verifyToken, async (req, res, next) => {
   try {
     const { userId } = req.params;
-    const { localDate } = req.body; //this is needed for counting the pokes in a day
+    const { localDate } = req.body; 
 
     if (!localDate) {
       return res.status(400).json({
@@ -17,7 +17,7 @@ router.post("/:userId", verifyToken, async (req, res, next) => {
       });
     }
     
-    // check if users are connected
+    //users are connected?
     const connection = await Connection.findOne({
       status: "accepted",
       $or: [
@@ -62,6 +62,45 @@ router.post("/:userId", verifyToken, async (req, res, next) => {
       message: "Poke sent successfully",
       todayPokes,
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET -> /api/pokes/unplanted
+router.get("/unplanted", verifyToken, async (req, res, next) => {
+  try {
+    const pokes = await Poke.find({
+      to: req.payload._id,
+      plantedAt: null,
+    })
+      .sort({ createdAt: -1 })
+      .populate("from", "name username avatar");
+
+    res.status(200).json({ pokes });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// DELETE -> /api/pokes/:pokeId
+router.delete("/:pokeId", verifyToken, async (req, res, next) => {
+  try {
+    const { pokeId } = req.params;
+
+    const poke = await Poke.findOneAndDelete({
+      _id: pokeId,
+      to: req.payload._id,
+      plantedAt: null,
+    });
+
+    if (!poke) {
+      return res.status(404).json({
+        message: "Poke not found or already planted",
+      });
+    }
+
+    res.status(200).json({ message: "Flower thrown away" });
   } catch (error) {
     next(error);
   }

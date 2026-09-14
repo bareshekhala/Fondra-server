@@ -5,10 +5,10 @@ const GardenItem = require("../models/GardenItem.model.js");
 const verifyToken = require("../middlewares/auth.middlewares");
 const Poke = require("../models/Poke.model.js");
 
-const types = ["daisy", "tulip", "sunflower", "lavender", "fern"];
 
-// GET
-// /api/garden
+
+// GET -> /api/garden
+const types = GardenItem.schema.path("species").enumValues;
 router.get("/", verifyToken, async (req, res, next) => {
   try {
     const garden = await GardenItem.find({
@@ -25,8 +25,7 @@ router.get("/", verifyToken, async (req, res, next) => {
   }
 });
 
-//POST
-// /api/garden/plant/:pokeId
+//POST -> /api/garden/plant/:pokeId
 router.post("/plant/:pokeId", verifyToken, async (req, res, next) => {
   try {
     const { pokeId } = req.params;
@@ -56,8 +55,7 @@ router.post("/plant/:pokeId", verifyToken, async (req, res, next) => {
       y: typeof y === "number" ? y : Math.random() * 0.3 + 0.6,
     });
 
-    poke.plantedAt = new Date();
-    await poke.save();
+    await Poke.findByIdAndUpdate(poke._id, { plantedAt: new Date() });
 
     res.status(201).json({ gardenItem });
   } catch (error) {
@@ -65,8 +63,7 @@ router.post("/plant/:pokeId", verifyToken, async (req, res, next) => {
   }
 });
 
-// PUT
-// /api/garden/:gardenItemId
+// PUT -> /api/garden/:gardenItemId
 router.put("/:gardenItemId", verifyToken, async (req, res, next) => {
   try {
     const { gardenItemId } = req.params;
@@ -82,7 +79,10 @@ router.put("/:gardenItemId", verifyToken, async (req, res, next) => {
     const gardenItem = await GardenItem.findOneAndUpdate(
       { _id: gardenItemId, user: req.payload._id },
       { x, y },
-      { new: true },
+      {
+        returnDocument: "after",
+        runValidators: true,
+      },
     );
 
     if (!gardenItem) {
@@ -97,8 +97,7 @@ router.put("/:gardenItemId", verifyToken, async (req, res, next) => {
 
 
 
-// DELETE
-// /api/garden/:gardenItemId
+// DELETE -> /api/garden/:gardenItemId
 router.delete("/:gardenItemId", verifyToken, async (req, res, next) => {
   try {
     const { gardenItemId } = req.params;

@@ -5,6 +5,9 @@ const router = express.Router()
 const authRouter = require("./auth.routes.js")
 router.use("/auth", authRouter)
 
+const userRouter = require("./user.routes.js")
+router.use("/users", userRouter)
+
 const checkinRouter = require("./checkIn.routes.js")
 router.use("/checkins",checkinRouter)
 
@@ -16,5 +19,9 @@ router.use("/garden", gardenRouter);
 
 const connectionRouter = require("./connection.routes.js");
 router.use("/connections", connectionRouter);
+
+const uploadRoutes = require("./upload.routes");
+router.use("/upload", uploadRoutes);
+
 
 module.exports = router

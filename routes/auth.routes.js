@@ -2,13 +2,14 @@ const express = require("express");
 const router = express.Router();
 
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
 
 const User = require("../models/User.model.js");
 const Connection = require("../models/Connection.model.js");
 
 const verifyToken = require("../middlewares/auth.middlewares");
 
-// GET "/api/invite/:code"
+// GET -> /api/auth/invite/:code
 // Check the invitation link
 router.get("/invite/:code", async (req, res, next) => {
   try {
@@ -34,13 +35,11 @@ router.get("/invite/:code", async (req, res, next) => {
   }
 });
 
-// POST "/api/auth/signup"
-// Create a new user
+// POST -> /api/auth/signup
 router.post("/signup", async (req, res, next) => {
   try {
     const { username, email, password, name, inviteCode } = req.body;
 
-    // Mandatory fields
     if (!username || !email || !password || !name) {
       return res.status(400).json({
         message: "Fill in every field to continue",
@@ -52,38 +51,34 @@ router.post("/signup", async (req, res, next) => {
 
     if (!passwordRegex.test(password)) {
       return res.status(400).json({
-        errorMessage:
+        message:
           "Password not strong enough. Needs at least 8 characters, one uppercase, one lowercase and one number",
       });
     }
 
-    // Check if email already exists
-    const foundUser = await User.findOne({ email });
+    // Check if email or username already existed
+    const foundUser = await User.findOne({ $or: [{ email }, { username }] });
 
     if (foundUser) {
       return res.status(400).json({
-        errorMessage: "User already exists with this email",
+        message: "User already exists with this email or username",
       });
     }
 
-    // Create the new user
-    const user = new User({
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    const user = await User.create({
       username,
       email,
       name,
+      passwordHash,
     });
-
-    // Hash the password
-    await user.setPassword(password);
-
-    // Save user in database
-    await user.save();
 
     // If the user joined through an invitation
     if (inviteCode) {
       const sender = await User.findOne({ inviteCode });
 
-      // Make sure the user did not invite herself
+      //to make sure the user did not invite herself :)
       if (sender && String(sender._id) !== String(user._id)) {
         // Create the Connection between them
         await Connection.create({
@@ -100,20 +95,17 @@ router.post("/signup", async (req, res, next) => {
   }
 });
 
-// POST "/api/auth/login"
-// Validate credentials and create JWT
+// POST -> /api/auth/login
 router.post("/login", async (req, res, next) => {
   try {
     const { identifier, password } = req.body;
 
-    // Both fields are required
     if (!identifier || !password) {
       return res.status(400).json({
         message: "Enter your details to sign in",
       });
     }
 
-    // Search by email OR username
     const foundUser = await User.findOne({
       $or: [
         { email: identifier.toLowerCase() },
@@ -123,7 +115,7 @@ router.post("/login", async (req, res, next) => {
 
     if (!foundUser) {
       return res.status(400).json({
-        errorMessage: "User not found",
+        message: "User not found",
       });
     }
 
@@ -132,7 +124,7 @@ router.post("/login", async (req, res, next) => {
 
     if (!passwordCorrect) {
       return res.status(400).json({
-        errorMessage: "Invalid password",
+        message: "Invalid password",
       });
     }
 
@@ -157,52 +149,12 @@ router.post("/login", async (req, res, next) => {
   }
 });
 
-// GET "/api/auth/verify"
+// GET -> /api/auth/verify
 // Verify the JWT
 router.get("/verify", verifyToken, (req, res) => {
   res.status(200).json({
     payload: req.payload,
   });
-});
-
-
-
-const statusType = ["okay", "busy", "low", "need_checkins"];
-//Put -> /api/auth/status
-router.put("/status", verifyToken, async (req, res, next) => {
-
-  try {
-    const { status, statusNote = "" } = req.body;
-
-    if (!statusType.includes(status)) {
-      return res.status(400).json({ message: "Pick one of the available statuses" });
-    }
-
-    const user = await User.findByIdAndUpdate(
-      req.payload._id,
-      { status, statusNote: statusNote.slice(0, 140) },
-      { new: true },
-    );
-
-    res.status(200).json({ user: user.toPublic() });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// DELETE /api/auth/delete-account
- router.delete("/delete-account", verifyToken, async (req, res, next) => {
-  try {
-    const userId = req.payload._id;
-
-    await User.findByIdAndDelete(userId);
-
-    res.status(200).json({
-      message: "Account deleted successfully",
-    });
-  } catch (error) {
-    next(error);
-  }
 });
 
 module.exports = router;

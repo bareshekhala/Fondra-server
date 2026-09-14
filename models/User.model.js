@@ -1,9 +1,8 @@
 const { Schema, model } = require("mongoose");
 const bcrypt = require("bcryptjs");
 
-//crypto will be used for making invitation Link
+//crypto is used for making invitation code
 const crypto = require("crypto");
-const statusType = ["okay", "busy", "low", "need_checkins"];
 
 const userSchema = new Schema(
   {
@@ -34,7 +33,6 @@ const userSchema = new Schema(
       type: String,
       required: true,
     },
-    // this is  an URL and then it will be put on cloudinary
     avatar: { type: String, default: "" },
 
     inviteCode: {
@@ -46,11 +44,20 @@ const userSchema = new Schema(
       type: Date,
       default: null,
     },
-    status: { 
-        type: String, enum: statusType, default: "okay" 
+    checkIn: {
+      type: Schema.Types.ObjectId,
+      ref: "CheckIn",
+      default: null,
     },
-    statusNote: { 
-        type: String, default: "", maxlength: 140 
+    status: {
+      type: String,
+      enum: ["okay", "busy", "low", "need_checkins"],
+      default: "okay",
+    },
+    statusNote: {
+      type: String,
+      default: "",
+      maxlength: 140,
     },
   },
   {
@@ -58,23 +65,17 @@ const userSchema = new Schema(
   },
 );
 
-//we want each user to has her own link so she can invite other people
-// pre => this run first before anything else and Mongoose validates the user first
-userSchema.pre('validate', function () {
+//we want each user to has her own code so she can invite other people
+userSchema.pre("validate", function () {
   if (!this.inviteCode) {
-    this.inviteCode = crypto.randomBytes(6).toString('hex')
+    this.inviteCode = crypto.randomBytes(6).toString("hex");
   }
-})
+});
 
-//changing the user password to a passwordHash
-userSchema.methods.setPassword = async function (pass) {
-  this.passwordHash = await bcrypt.hash(pass, 12)
-}
 userSchema.methods.checkPassword = function (pass) {
-  return bcrypt.compare(pass, this.passwordHash)
-}
+  return bcrypt.compare(pass, this.passwordHash);
+};
 
-//we just send these information to the frontend
 userSchema.methods.toPublic = function () {
   return {
     id: this._id,
@@ -84,9 +85,10 @@ userSchema.methods.toPublic = function () {
     avatar: this.avatar,
     inviteCode: this.inviteCode,
     lastCheckIn: this.lastCheckIn,
+    checkIn: this.checkIn,
     status: this.status,
     statusNote: this.statusNote,
-  }
-}
+  };
+};
 const User = model("User", userSchema);
 module.exports = User;

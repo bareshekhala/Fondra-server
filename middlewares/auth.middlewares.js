@@ -16,7 +16,7 @@ function verifyToken(req, res, next) {
     // if the token doesn't exist
     // if the token is invalid
     // if the token has expired
-    res.status(401).json({errorMessage: "Token doesn't exist or is not valid"})
+    res.status(401).json({message: "Token doesn't exist or is not valid"})
   }
 }
 

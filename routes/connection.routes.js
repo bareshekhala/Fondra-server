@@ -5,24 +5,22 @@ const Connection = require("../models/Connection.model.js");
 const User = require("../models/User.model.js");
 const verifyToken = require("../middlewares/auth.middlewares");
 
-//searching for connections -> /api/connections/search?q=
+// GET -> /api/connections/search...
 router.get("/search", verifyToken, async (req, res, next) => {
   try {
     const q = (req.query.q || "").trim().toLowerCase();
+
     if (q.length < 2) {
       return res.status(200).json({ results: [] });
     }
 
-    //our current connections can be hidden in the serarch...
-    // I will add this part later....
-
-    //now just our profile is hidden in the search
     const results = await User.find({
-      _id: { $ne: req.payload._id },
-      $or: [{ username: { $regex: q, $options: "i" } }, { email: q }],
+      _id: { $ne: req.payload._id }, 
+      $or: [{ username: { $regex: q } }, { email: q }],
     })
       .select("username name avatar")
       .limit(10);
+
     res.status(200).json({ results });
   } catch (error) {
     next(error);
@@ -39,13 +37,12 @@ router.post("/request/:userId", verifyToken, async (req, res, next) => {
         message: "You're already in your own circle",
       });
     }
-    // check if the user is exist or not
     const result = await User.findById(userId);
     if (!result) {
-      return res.status(204).json(result);
+      return res.sendStatus(204);
     }
 
-    //check if we already have a connection
+    //already have a connection?
     const already = await Connection.findOne({
       $or: [
         { requester: req.payload._id, recipient: userId },
@@ -53,23 +50,20 @@ router.post("/request/:userId", verifyToken, async (req, res, next) => {
       ],
     });
     if (already) {
-      return res.status(409).json({ message: "You already have a connection/request with them" });
+      return res
+        .status(409)
+        .json({ message: "You already have a connection/request with them" });
     }
     const connection = await Connection.create({
       requester: req.payload._id,
       recipient: userId,
     });
 
+    await connection.populate("recipient", "username name avatar status");
+
     res.status(201).json({
-      message: `Request sent to ${result.name}`,
+      message: `Request sent to ${connection.recipient.name}`,
       connection,
-      recipient: {
-        id: result._id,
-        name: result.name,
-        username: result.username,
-        avatar: result.avatar,
-        status: result.status,
-      },
     });
   } catch (error) {
     next(error);
@@ -94,18 +88,19 @@ router.get("/requests", verifyToken, async (req, res, next) => {
 //Put -> /api/connections/:connectionId/accept
 router.put("/:connectionId/accept", verifyToken, async (req, res, next) => {
   try {
-    const connection = await Connection.findOne({
-      _id: req.params.connectionId,
-      recipient: req.payload._id,
-      status: "pending",
-    });
+    const connection = await Connection.findOneAndUpdate(
+      {
+        _id: req.params.connectionId,
+        recipient: req.payload._id,
+        status: "pending",
+      },
+      { status: "accepted" },
+      { returnDocument: "after" },
+    );
 
     if (!connection) {
-      return res.status(204).json(connection);
+      return res.sendStatus(204);
     }
-    // the user accept it and then we update the connection status from pending to accepted
-    connection.status = "accepted";
-    await connection.save();
 
     res.status(200).json({ message: "Added to your circle", connection });
   } catch (error) {
@@ -119,10 +114,14 @@ router.get("/", verifyToken, async (req, res, next) => {
     const circle = await Connection.find({
       status: "accepted",
       $or: [{ requester: req.payload._id }, { recipient: req.payload._id }],
-    }).populate(
-      "requester recipient",
-      "username name avatar lastCheckIn status statusNote",
-    );
+    }).populate({
+      path: "requester recipient",
+      select: "username name avatar lastCheckIn checkIn status statusNote",
+      populate: {
+        path: "checkIn",
+        select: "mood note social createdAt",
+      },
+    });
 
     const myCircle = circle.map((c) =>
       String(c.requester._id) === String(req.payload._id)
@@ -147,11 +146,15 @@ router.delete("/:userId", verifyToken, async (req, res, next) => {
     });
 
     if (!remove) {
-      return res.status(204).json({ message: "They're not in your circle" });
+      return res.sendStatus(204);
     }
 
-    res.status(200).json({ message:remove.status === "pending" ? "Request withdrawn" : "Removed from your circle",
-      });
+    res.status(200).json({
+      message:
+        remove.status === "pending"
+          ? "Request withdrawn"
+          : "Removed from your circle",
+    });
   } catch (error) {
     next(error);
   }
