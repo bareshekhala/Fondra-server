@@ -34,7 +34,7 @@ router.post("/plant/:pokeId", verifyToken, async (req, res, next) => {
     const poke = await Poke.findOne({
       _id: pokeId,
       to: req.payload._id,
-      kind: "poke",
+      kind: "gift", // only a poke back becomes a flower
       plantedAt: null,
     });
 

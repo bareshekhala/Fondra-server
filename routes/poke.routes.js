@@ -51,16 +51,26 @@ router.post("/:userId", verifyToken, async (req, res, next) => {
       });
     }
 
-    // create a poke
-    const poke = await Poke.create({
+    const theirPoke = await Poke.findOne({
+      from: userId,
+      to: req.payload._id,
+      kind: "poke",
+      answeredAt: null,
+    });
+
+    await Poke.create({
       from: req.payload._id,
       to: userId,
       localDate,
+      kind: theirPoke ? "gift" : "poke",
     });
 
+    if (theirPoke) {
+      await Poke.findByIdAndUpdate(theirPoke._id, { answeredAt: new Date() });
+    }
+
     res.status(201).json({
-      message: "Poke sent successfully",
-      todayPokes,
+      message: theirPoke ? "Poked back — they got a flower" : "Poke sent",
     });
   } catch (error) {
     next(error);
@@ -72,6 +82,7 @@ router.get("/unplanted", verifyToken, async (req, res, next) => {
   try {
     const pokes = await Poke.find({
       to: req.payload._id,
+      kind: "gift",
       plantedAt: null,
     })
       .sort({ createdAt: -1 })
@@ -91,6 +102,7 @@ router.delete("/:pokeId", verifyToken, async (req, res, next) => {
     const poke = await Poke.findOneAndDelete({
       _id: pokeId,
       to: req.payload._id,
+      kind: "gift",
       plantedAt: null,
     });
 
