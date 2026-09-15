@@ -132,7 +132,7 @@ router.get("/", verifyToken, async (req, res, next) => {
       $or: [{ requester: req.payload._id }, { recipient: req.payload._id }],
     }).populate({
       path: "requester recipient",
-      select: "username name avatar lastCheckIn checkIn",
+      select: "username name avatar lastCheckIn checkIn location",
       populate: {
         path: "checkIn",
         select: "mood note social createdAt",

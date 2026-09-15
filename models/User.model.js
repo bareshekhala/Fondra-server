@@ -50,6 +50,24 @@ const userSchema = new Schema(
       ref: "CheckIn",
       default: null,
     },
+     location: {
+    city: {
+      type: String,
+      default: "",
+    },
+    country: {
+      type: String,
+      default: "",
+    },
+    latitude: {
+      type: Number,
+      default: null,
+    },
+    longitude: {
+      type: Number,
+      default: null,
+    },
+  },
   },
   {
     timestamps: true,
@@ -77,6 +95,7 @@ userSchema.methods.toPublic = function () {
     inviteCode: this.inviteCode,
     lastCheckIn: this.lastCheckIn,
     checkIn: this.checkIn,
+    location: this.location
   };
 };
 const User = model("User", userSchema);

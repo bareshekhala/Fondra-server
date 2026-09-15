@@ -128,6 +128,19 @@ router.post("/login", async (req, res, next) => {
       });
     }
 
+    //getting the IP of the user
+    const response = await axios.get("https://ipapi.co/json/");
+    const location = response.data;
+
+    await User.findByIdAndUpdate(foundUser._id, {
+      location: {
+        city: location.city,
+        country: location.country_name,
+        latitude: location.latitude,
+        longitude: location.longitude,
+      },
+    });
+
     // JWT payload
     const payload = {
       _id: foundUser._id,
