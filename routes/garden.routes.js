@@ -5,10 +5,33 @@ const GardenItem = require("../models/GardenItem.model.js");
 const verifyToken = require("../middlewares/auth.middlewares");
 const Poke = require("../models/Poke.model.js");
 
+// with this way we do not let the flowers in the garden to be lost in each other :) we wanna make sure that each flower has a reasonable space
+const ASPECT = 9 / 16;
 
+const spotFor = (taken) => {
+  let best = null;
+
+  for (let i = 0; i < 20; i += 1) {
+    const spot = {
+      x: Math.random() * 0.8 + 0.1,
+      y: Math.random() * 0.32 + 0.6,
+    };
+
+    const room = taken.reduce((closest, other) => {
+      const dx = spot.x - other.x;
+      const dy = (spot.y - other.y) * ASPECT;
+      return Math.min(closest, Math.sqrt(dx * dx + dy * dy));
+    }, Infinity);
+
+    if (!best || room > best.room) {
+      best = { ...spot, room };
+    }
+  }
+
+  return best;
+};
 
 // GET -> /api/garden
-const types = GardenItem.schema.path("species").enumValues;
 router.get("/", verifyToken, async (req, res, next) => {
   try {
     const garden = await GardenItem.find({
@@ -29,7 +52,7 @@ router.get("/", verifyToken, async (req, res, next) => {
 router.post("/plant/:pokeId", verifyToken, async (req, res, next) => {
   try {
     const { pokeId } = req.params;
-    const { x, y } = req.body;
+    const { x, y, picked = false } = req.body;
 
     const poke = await Poke.findOne({
       _id: pokeId,
@@ -43,21 +66,57 @@ router.post("/plant/:pokeId", verifyToken, async (req, res, next) => {
         message: "Poke not found or already planted",
       });
     }
-   
+    
+    // the flower is choosed randomly
+    const types = GardenItem.schema.path("species").enumValues;
 
-    const species = types[Math.floor(Math.random() * types.length)];
+    const species =
+      poke.species || types[Math.floor(Math.random() * types.length)];
+
+    const planted = await GardenItem.find({
+      user: req.payload._id,
+      picked: true,
+    }).select("x y");
+
+    const spot = spotFor(planted);
 
     const gardenItem = await GardenItem.create({
       user: req.payload._id,
       fromUser: poke.from,
       species,
-      x: typeof x === "number" ? x : Math.random() * 0.8 + 0.1,
-      y: typeof y === "number" ? y : Math.random() * 0.3 + 0.6,
+      picked: Boolean(picked),
+      x: typeof x === "number" ? x : spot.x,
+      y: typeof y === "number" ? y : spot.y,
     });
 
     await Poke.findByIdAndUpdate(poke._id, { plantedAt: new Date() });
 
     res.status(201).json({ gardenItem });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PUT -> /api/garden/:gardenItemId/picked
+router.put("/:gardenItemId/picked", verifyToken, async (req, res, next) => {
+  try {
+    const { picked } = req.body;
+
+    if (typeof picked !== "boolean") {
+      return res.status(400).json({ message: "Picked must be true or false" });
+    }
+
+    const gardenItem = await GardenItem.findOneAndUpdate(
+      { _id: req.params.gardenItemId, user: req.payload._id },
+      { picked },
+      { returnDocument: "after" },
+    );
+
+    if (!gardenItem) {
+      return res.status(404).json({ message: "Garden item not found" });
+    }
+
+    res.status(200).json({ gardenItem });
   } catch (error) {
     next(error);
   }
@@ -72,7 +131,10 @@ router.put("/:gardenItemId", verifyToken, async (req, res, next) => {
     if (
       typeof x !== "number" ||
       typeof y !== "number" ||
-      x < 0 || x > 1 || y < 0 || y > 1
+      x < 0 ||
+      x > 1 ||
+      y < 0 ||
+      y > 1
     ) {
       return res.status(400).json({ message: "That position is off the plot" });
     }
@@ -94,8 +156,6 @@ router.put("/:gardenItemId", verifyToken, async (req, res, next) => {
     next(error);
   }
 });
-
-
 
 // DELETE -> /api/garden/:gardenItemId
 router.delete("/:gardenItemId", verifyToken, async (req, res, next) => {

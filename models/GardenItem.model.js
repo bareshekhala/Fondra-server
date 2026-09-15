@@ -17,6 +17,10 @@ const gardenItemSchema = new Schema(
       enum: ["daisy", "tulip", "sunflower", "lavender", "fern"],
       required: true,
     },
+    picked: {
+      type: Boolean,
+      default: false,
+    },
     x: {
       type: Number,
       required: true,

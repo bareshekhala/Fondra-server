@@ -60,8 +60,7 @@ router.post("/request/:userId", verifyToken, async (req, res, next) => {
       recipient: userId,
     });
 
-    await connection
-    .populate("recipient", "username name avatar");
+    await connection.populate("recipient", "username name avatar");
 
     res.status(201).json({
       message: `Request sent to ${connection.recipient.name}`,
@@ -147,15 +146,38 @@ router.get("/", verifyToken, async (req, res, next) => {
       answeredAt: null,
     });
 
+    //pokes I sent
+    const myPokes = await Poke.find({
+      from: req.payload._id,
+      kind: "poke",
+      answeredAt: null,
+    });
+
+
+    const { localDate } = req.query;
+
+    const sentToday =
+     localDate ? await Poke.find({ from: req.payload._id, localDate }).select("to") : [];
+
     const myCircle = circle.map((c) => {
       const otherUser =
-        String(c.requester._id) === String(req.payload._id)
-          ? c.recipient
-          : c.requester;
+        String(c.requester._id) === String(req.payload._id) ? c.recipient : c.requester;
 
       const poke = pokes.find((p) => String(p.from) === String(otherUser._id));
+      const myPoke = myPokes.find(
+        (p) => String(p.to) === String(otherUser._id),
+      );
 
-      return { ...otherUser.toObject(), pokedAt: poke ? poke.createdAt : null };
+      const pokesToday = sentToday.filter(
+        (p) => String(p.to) === String(otherUser._id),
+      ).length;
+
+      return {
+        ...otherUser.toObject(),
+        pokedAt: poke ? poke.createdAt : null,
+        myPokeAt: myPoke ? myPoke.createdAt : null,
+        pokesToday,
+      };
     });
 
     res.status(200).json({ myCircle });

@@ -20,6 +20,12 @@ const pokeSchema = new Schema(
       default: "poke",
     },
 
+    species: {
+      type: String,
+      enum: ["daisy", "tulip", "sunflower", "lavender", "fern"],
+      default: null,
+    },
+
     answeredAt: {
       type: Date,
       default: null,

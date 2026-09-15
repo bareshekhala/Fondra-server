@@ -9,14 +9,14 @@ const verifyToken = require("../middlewares/auth.middlewares");
 router.post("/:userId", verifyToken, async (req, res, next) => {
   try {
     const { userId } = req.params;
-    const { localDate } = req.body; 
+    const { localDate } = req.body;
 
     if (!localDate) {
       return res.status(400).json({
         message: "Date is required",
       });
     }
-    
+
     //users are connected?
     const connection = await Connection.findOne({
       status: "accepted",
@@ -39,18 +39,21 @@ router.post("/:userId", verifyToken, async (req, res, next) => {
     }
 
     // the number pokes that you can send a person is limited to 5
+    const DAILY_POKE_LIMIT = 5;
+    
+    //my pokes
     const todayPokes = await Poke.countDocuments({
       from: req.payload._id,
       to: userId,
       localDate,
     });
 
-    if (todayPokes >= 5) {
+    if (todayPokes >= DAILY_POKE_LIMIT) {
       return res.status(409).json({
-        message: "You can poke this person up to 5 times a day",
+        message: `You can poke this person up to ${DAILY_POKE_LIMIT} times a day`,
       });
     }
-
+    //my connection poke
     const theirPoke = await Poke.findOne({
       from: userId,
       to: req.payload._id,
@@ -58,11 +61,33 @@ router.post("/:userId", verifyToken, async (req, res, next) => {
       answeredAt: null,
     });
 
+    if (!theirPoke) {
+      const myPoke = await Poke.findOne({
+        from: req.payload._id,
+        to: userId,
+        kind: "poke",
+        answeredAt: null,
+      });
+
+      const POKE_COOLDOWN = 60 * 60 * 1000; //1 hour -> ms
+      if (myPoke && Date.now() - myPoke.createdAt.getTime() < POKE_COOLDOWN) {
+        return res.status(409).json({
+          message: "You can poke again after one hour",
+        });
+      }
+    }
+
+    const speciesType = Poke.schema.path("species").enumValues;
+
+    const randomSpecies = () =>
+      speciesType[Math.floor(Math.random() * speciesType.length)];
+
     await Poke.create({
       from: req.payload._id,
       to: userId,
       localDate,
       kind: theirPoke ? "gift" : "poke",
+      species: theirPoke ? randomSpecies() : null,
     });
 
     if (theirPoke) {
