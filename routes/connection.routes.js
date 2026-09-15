@@ -3,6 +3,7 @@ const router = express.Router();
 
 const Connection = require("../models/Connection.model.js");
 const User = require("../models/User.model.js");
+const Poke = require("../models/Poke.model.js");
 const verifyToken = require("../middlewares/auth.middlewares");
 
 // GET -> /api/connections/search...
@@ -15,7 +16,7 @@ router.get("/search", verifyToken, async (req, res, next) => {
     }
 
     const results = await User.find({
-      _id: { $ne: req.payload._id }, 
+      _id: { $ne: req.payload._id },
       $or: [{ username: { $regex: q } }, { email: q }],
     })
       .select("username name avatar")
@@ -59,7 +60,8 @@ router.post("/request/:userId", verifyToken, async (req, res, next) => {
       recipient: userId,
     });
 
-    await connection.populate("recipient", "username name avatar status");
+    await connection
+    .populate("recipient", "username name avatar");
 
     res.status(201).json({
       message: `Request sent to ${connection.recipient.name}`,
@@ -71,15 +73,30 @@ router.post("/request/:userId", verifyToken, async (req, res, next) => {
 });
 
 //Get -> /api/connections/requests
-// the requests that user needs to answer
 router.get("/requests", verifyToken, async (req, res, next) => {
   try {
     const requests = await Connection.find({
       recipient: req.payload._id,
       status: "pending",
-    }).populate("requester", "username name avatar status");
+    }).populate("requester", "username name avatar");
 
     res.status(200).json({ requests });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET -> /api/connections/sent
+router.get("/sent", verifyToken, async (req, res, next) => {
+  try {
+    const sent = await Connection.find({
+      requester: req.payload._id,
+      status: "pending",
+    })
+      .sort({ createdAt: -1 })
+      .populate("recipient", "username name avatar");
+
+    res.status(200).json({ sent });
   } catch (error) {
     next(error);
   }
@@ -116,18 +133,30 @@ router.get("/", verifyToken, async (req, res, next) => {
       $or: [{ requester: req.payload._id }, { recipient: req.payload._id }],
     }).populate({
       path: "requester recipient",
-      select: "username name avatar lastCheckIn checkIn status statusNote",
+      select: "username name avatar lastCheckIn checkIn",
       populate: {
         path: "checkIn",
         select: "mood note social createdAt",
       },
     });
 
-    const myCircle = circle.map((c) =>
-      String(c.requester._id) === String(req.payload._id)
-        ? c.recipient
-        : c.requester,
-    );
+    // pokes waiting for my answer
+    const pokes = await Poke.find({
+      to: req.payload._id,
+      kind: "poke",
+      answeredAt: null,
+    });
+
+    const myCircle = circle.map((c) => {
+      const otherUser =
+        String(c.requester._id) === String(req.payload._id)
+          ? c.recipient
+          : c.requester;
+
+      const poke = pokes.find((p) => String(p.from) === String(otherUser._id));
+
+      return { ...otherUser.toObject(), pokedAt: poke ? poke.createdAt : null };
+    });
 
     res.status(200).json({ myCircle });
   } catch (error) {
@@ -135,7 +164,7 @@ router.get("/", verifyToken, async (req, res, next) => {
   }
 });
 
-//Delete -> // /api/connections/:userId
+//Delete -> /api/connections/:userId
 router.delete("/:userId", verifyToken, async (req, res, next) => {
   try {
     const remove = await Connection.findOneAndDelete({
@@ -148,6 +177,15 @@ router.delete("/:userId", verifyToken, async (req, res, next) => {
     if (!remove) {
       return res.sendStatus(204);
     }
+
+    await Poke.deleteMany({
+      kind: "poke",
+      answeredAt: null,
+      $or: [
+        { from: req.payload._id, to: req.params.userId },
+        { from: req.params.userId, to: req.payload._id },
+      ],
+    });
 
     res.status(200).json({
       message:

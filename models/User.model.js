@@ -34,6 +34,7 @@ const userSchema = new Schema(
       required: true,
     },
     avatar: { type: String, default: "" },
+    avatarId: { type: String, default: "" },
 
     inviteCode: {
       type: String,
@@ -48,16 +49,6 @@ const userSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "CheckIn",
       default: null,
-    },
-    status: {
-      type: String,
-      enum: ["okay", "busy", "low", "need_checkins"],
-      default: "okay",
-    },
-    statusNote: {
-      type: String,
-      default: "",
-      maxlength: 140,
     },
   },
   {
@@ -86,8 +77,6 @@ userSchema.methods.toPublic = function () {
     inviteCode: this.inviteCode,
     lastCheckIn: this.lastCheckIn,
     checkIn: this.checkIn,
-    status: this.status,
-    statusNote: this.statusNote,
   };
 };
 const User = model("User", userSchema);

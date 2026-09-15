@@ -7,6 +7,7 @@ const Poke = require("../models/Poke.model.js");
 const GardenItem = require("../models/GardenItem.model.js");
 const Connection = require("../models/Connection.model.js");
 const verifyToken = require("../middlewares/auth.middlewares");
+const { destroyAvatar } = require("../middlewares/cloudinary.config.js");
 
 // GET -> /api/users/me
 router.get("/me", verifyToken, async (req, res, next) => {
@@ -23,34 +24,8 @@ router.get("/me", verifyToken, async (req, res, next) => {
   }
 });
 
-// PUT -> /api/users/status
-const statusType = User.schema.path("status").enumValues;
-
-router.put("/status", verifyToken, async (req, res, next) => {
-  try {
-    const { status, statusNote = "" } = req.body;
-
-    if (!statusType.includes(status)) {
-      return res.status(400).json({ message: "Pick one of the available statuses" });
-    }
-
-    const user = await User.findByIdAndUpdate(
-      req.payload._id,
-      { status, statusNote },
-      {
-        returnDocument: "after",
-        runValidators: true, 
-      },
-    );
-
-    res.status(200).json({ user: user.toPublic() });
-  } catch (error) {
-    next(error);
-  }
-});
-
 // DELETE -> /api/users/delete-account
-// delete account
+// delete account => so with this when a user deletes her account we delete all her information
 router.delete("/delete-account", verifyToken, async (req, res, next) => {
   try {
     const userId = req.payload._id;
@@ -62,7 +37,11 @@ router.delete("/delete-account", verifyToken, async (req, res, next) => {
       $or: [{ requester: userId }, { recipient: userId }],
     });
 
-    await User.findByIdAndDelete(userId);
+    const deleted = await User.findByIdAndDelete(userId);
+
+    if (deleted) {
+      await destroyAvatar(deleted.avatarId);
+    }
 
     res.status(200).json({ message: "Account deleted successfully" });
   } catch (error) {

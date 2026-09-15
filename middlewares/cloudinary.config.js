@@ -25,4 +25,16 @@ const fileUploader = multer({
   limits: { fileSize: 3 * 1024 * 1024 },
 });
 
-module.exports = fileUploader;
+const destroyAvatar = async (avatarId) => {
+  if (!avatarId) {
+    return;
+  }
+
+  try {
+    await cloudinary.uploader.destroy(avatarId);
+  } catch (error) {
+    console.log("Could not remove the old avatar from Cloudinary:", error);
+  }
+};
+
+module.exports = { fileUploader, cloudinary, destroyAvatar };

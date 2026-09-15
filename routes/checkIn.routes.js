@@ -8,6 +8,9 @@ const verifyToken = require("../middlewares/auth.middlewares");
 // GET -> /api/checkins/today
 const maxCheckins = 5;
 const socialType = CheckIn.schema.path("social").enumValues;
+const moodType = CheckIn.schema.path("mood").enumValues;
+
+
 router.get("/today", verifyToken, async (req, res, next) => {
   try {
     const { localDate } = req.query;
@@ -44,7 +47,7 @@ router.get("/today", verifyToken, async (req, res, next) => {
 // POST -> /api/checkins
 router.post("/", verifyToken, async (req, res, next) => {
   try {
-    const { localDate, mood = "okay", note = "", social = "" } = req.body;
+    const { localDate, mood = "Busy but okay", note = "", social = "" } = req.body;
 
     //required
     if (!localDate) {
@@ -54,9 +57,9 @@ router.post("/", verifyToken, async (req, res, next) => {
     }
 
     //check mood
-    if (!["good", "okay", "low"].includes(mood)) {
+    if (!moodType.includes(mood)) {
       return res.status(400).json({
-        message: "Mood must be good, okay or low",
+        message: "Pick one of the available moods",
       });
     }
 

@@ -9,8 +9,8 @@ const checkInSchema = new Schema(
     },
     mood: {
       type: String,
-      enum: ["good", "okay", "low"],
-      default: "okay",
+      enum: ["I'm good", "Busy but okay", "Not great"],
+      default: "Busy but okay",
     },
     note: {
       type: String,
