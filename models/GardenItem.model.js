@@ -12,6 +12,13 @@ const gardenItemSchema = new Schema(
       ref: "User",
       default: null,
     },
+    poke: {
+      type: Schema.Types.ObjectId,
+      ref: "Poke",
+      required: true,
+      unique: true,
+    },
+    
     species: {
       type: String,
       enum: ["daisy", "tulip", "sunflower", "lavender", "fern"],

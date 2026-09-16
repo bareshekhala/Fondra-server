@@ -39,18 +39,18 @@ router.post("/:userId", verifyToken, async (req, res, next) => {
     }
 
     // the number pokes that you can send a person is limited to 5
-    const DAILY_POKE_LIMIT = 5;
+    const dailyPoke = 5;
     
-    //my pokes
+    //my pokes number
     const todayPokes = await Poke.countDocuments({
       from: req.payload._id,
       to: userId,
       localDate,
     });
 
-    if (todayPokes >= DAILY_POKE_LIMIT) {
+    if (todayPokes >= dailyPoke) {
       return res.status(409).json({
-        message: `You can poke this person up to ${DAILY_POKE_LIMIT} times a day`,
+        message: `You can poke this person up to ${dailyPoke} times a day`,
       });
     }
     //my connection poke
@@ -69,7 +69,7 @@ router.post("/:userId", verifyToken, async (req, res, next) => {
         answeredAt: null,
       });
 
-      const POKE_COOLDOWN = 60 * 60 * 1000; //1 hour -> ms
+      const POKE_COOLDOWN = 60 * 60 * 1000; //1 hour -> ms -> we can poke once in each hour
       if (myPoke && Date.now() - myPoke.createdAt.getTime() < POKE_COOLDOWN) {
         return res.status(409).json({
           message: "You can poke again after one hour",

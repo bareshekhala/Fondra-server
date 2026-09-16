@@ -3,7 +3,7 @@ const router = express.Router();
 
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
-
+const axios = require("axios");
 const User = require("../models/User.model.js");
 const Connection = require("../models/Connection.model.js");
 
@@ -128,19 +128,6 @@ router.post("/login", async (req, res, next) => {
       });
     }
 
-    //getting the IP of the user
-    const response = await axios.get("https://ipapi.co/json/");
-    const location = response.data;
-
-    await User.findByIdAndUpdate(foundUser._id, {
-      location: {
-        city: location.city,
-        country: location.country_name,
-        latitude: location.latitude,
-        longitude: location.longitude,
-      },
-    });
-
     // JWT payload
     const payload = {
       _id: foundUser._id,
@@ -168,6 +155,71 @@ router.get("/verify", verifyToken, (req, res) => {
   res.status(200).json({
     payload: req.payload,
   });
+});
+
+// GET -> /api/auth/location
+router.get("/location", verifyToken, async (req, res, next) => {
+  try {
+    let ip = req.ip.replace(/^::ffff:/, "");
+
+    if (ip === "::1" || ip === "127.0.0.1") {
+      const ipResponse = await axios.get(
+        "https://api.ipify.org?format=json",
+        { timeout: 5000 }
+      );
+
+      ip = ipResponse.data.ip;
+    }
+
+    const response = await axios.get(`https://ipwho.is/${ip}`, {
+      timeout: 5000,
+    });
+
+    if (
+      !response.data.success ||
+      response.data.latitude == null ||
+      response.data.longitude == null
+    ) {
+      return res.status(502).json({
+        message: "Could not determine your location",
+      });
+    }
+
+    const location = response.data;
+
+    const user = await User.findByIdAndUpdate(
+      req.payload._id,
+      {
+        location: {
+          city: location.city,
+          country: location.country,
+          latitude: location.latitude,
+          longitude: location.longitude,
+        },
+      },
+      { returnDocument: "after" },
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: "That account no longer exists" });
+    }
+
+    res.status(200).json({
+      location: {
+        city: location.city,
+        country: location.country,
+        latitude: location.latitude,
+        longitude: location.longitude,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+    next(error)
+
+    res.status(502).json({
+      message: "Location service is temporarily unavailable",
+    });
+  }
 });
 
 module.exports = router;
