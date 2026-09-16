@@ -4,6 +4,7 @@ const router = express.Router();
 const CheckIn = require("../models/CheckIn.model.js");
 const User = require("../models/User.model.js");
 const verifyToken = require("../middlewares/auth.middlewares");
+const { notifyCircle } = require("../middlewares/notify.js");
 
 // GET -> /api/checkins/today
 const maxCheckins = 5;
@@ -94,6 +95,10 @@ router.post("/", verifyToken, async (req, res, next) => {
       checkIn: checkIn._id,
     });
 
+    await notifyCircle(req.payload._id, {
+      type: "checkin",
+    });
+
     res.status(201).json({
       message: "Check-in created successfully",
     });
@@ -122,6 +127,10 @@ router.patch("/:checkInId", verifyToken, async (req, res, next) => {
         message: "Check-in not found",
       });
     }
+
+    await notifyCircle(req.payload._id, {
+      type: "checkin_update",
+    });
 
     res.status(200).json({ message: "Check-in updated" });
   } catch (error) {

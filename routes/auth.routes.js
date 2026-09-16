@@ -8,6 +8,7 @@ const User = require("../models/User.model.js");
 const Connection = require("../models/Connection.model.js");
 
 const verifyToken = require("../middlewares/auth.middlewares");
+const { notify } = require("../middlewares/notify.js");
 
 // GET -> /api/auth/invite/:code
 // Check the invitation link
@@ -81,10 +82,15 @@ router.post("/signup", async (req, res, next) => {
       //to make sure the user did not invite herself :)
       if (sender && String(sender._id) !== String(user._id)) {
         // Create the Connection between them
-        await Connection.create({
+        const connection = await Connection.create({
           requester: sender._id,
           recipient: user._id,
           status: "accepted",
+        });
+
+        await notify(sender._id, {
+          actor: user._id,
+          type: "accepted",
         });
       }
     }

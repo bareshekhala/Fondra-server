@@ -5,6 +5,7 @@ const Connection = require("../models/Connection.model.js");
 const User = require("../models/User.model.js");
 const Poke = require("../models/Poke.model.js");
 const verifyToken = require("../middlewares/auth.middlewares");
+const { notify } = require("../middlewares/notify.js");
 
 // GET -> /api/connections/search...
 router.get("/search", verifyToken, async (req, res, next) => {
@@ -62,6 +63,11 @@ router.post("/request/:userId", verifyToken, async (req, res, next) => {
 
     await connection.populate("recipient", "username name avatar");
 
+    await notify(userId, {
+      actor: req.payload._id,
+      type: "request",
+    });
+
     res.status(201).json({
       message: `Request sent to ${connection.recipient.name}`,
       connection,
@@ -117,6 +123,11 @@ router.put("/:connectionId/accept", verifyToken, async (req, res, next) => {
     if (!connection) {
       return res.sendStatus(204);
     }
+
+    await notify(connection.requester, {
+      actor: req.payload._id,
+      type: "accepted",
+    });
 
     res.status(200).json({ message: "Added to your circle", connection });
   } catch (error) {

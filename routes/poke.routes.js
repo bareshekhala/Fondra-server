@@ -4,6 +4,7 @@ const router = express.Router();
 const Poke = require("../models/Poke.model.js");
 const Connection = require("../models/Connection.model.js");
 const verifyToken = require("../middlewares/auth.middlewares");
+const { notify } = require("../middlewares/notify.js");
 
 //Post -> /api/pokes/:userId
 router.post("/:userId", verifyToken, async (req, res, next) => {
@@ -82,7 +83,7 @@ router.post("/:userId", verifyToken, async (req, res, next) => {
     const randomSpecies = () =>
       speciesType[Math.floor(Math.random() * speciesType.length)];
 
-    await Poke.create({
+    const poke = await Poke.create({
       from: req.payload._id,
       to: userId,
       localDate,
@@ -93,6 +94,11 @@ router.post("/:userId", verifyToken, async (req, res, next) => {
     if (theirPoke) {
       await Poke.findByIdAndUpdate(theirPoke._id, { answeredAt: new Date() });
     }
+
+    await notify(userId, {
+      actor: req.payload._id,
+      type: theirPoke ? "poke_back" : "poke",
+    });
 
     res.status(201).json({
       message: theirPoke ? "Poked back — they got a flower" : "Poke sent",

@@ -23,5 +23,8 @@ router.use("/connections", connectionRouter);
 const uploadRoutes = require("./upload.routes");
 router.use("/upload", uploadRoutes);
 
+const notificationRouter = require("./notification.routes.js");
+router.use("/notifications", notificationRouter);
+
 
 module.exports = router
