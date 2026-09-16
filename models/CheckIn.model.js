@@ -31,7 +31,14 @@ const checkInSchema = new Schema(
       ],
       default: "",
     },
-
+    watchOut: {
+      type: Boolean,
+      default: false,
+    },
+    watchOutAt: {
+      type: Date,
+      default: null,
+    },
     localDate: {
       type: String,
       required: true,

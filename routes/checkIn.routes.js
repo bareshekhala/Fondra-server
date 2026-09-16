@@ -11,7 +11,6 @@ const maxCheckins = 5;
 const socialType = CheckIn.schema.path("social").enumValues;
 const moodType = CheckIn.schema.path("mood").enumValues;
 
-
 router.get("/today", verifyToken, async (req, res, next) => {
   try {
     const { localDate } = req.query;
@@ -48,7 +47,14 @@ router.get("/today", verifyToken, async (req, res, next) => {
 // POST -> /api/checkins
 router.post("/", verifyToken, async (req, res, next) => {
   try {
-    const { localDate, mood = "Busy but okay", note = "", social = "" } = req.body;
+    const {
+      localDate,
+      mood = "Busy but okay",
+      note = "",
+      social = "",
+      watchOut = false,
+      watchOutAt = null,
+    } = req.body;
 
     //required
     if (!localDate) {
@@ -71,6 +77,23 @@ router.post("/", verifyToken, async (req, res, next) => {
       });
     }
 
+    //watch out -> the user is going somewhere alone and wants the circle to check on her after some hours
+    if (typeof watchOut !== "boolean") {
+      return res
+        .status(400)
+        .json({ message: "Watch out must be true or false" });
+    }
+
+    if (watchOut && watchOutAt) {
+      const watchOutDate = new Date(watchOutAt);
+
+      if (watchOutDate <= new Date()) {
+        return res.status(400).json({
+          message: "That time has already passed. Pick a time in the future",
+        });
+      }
+    }
+
     // number of check ins
     const todayCheckIns = await CheckIn.countDocuments({
       user: req.payload._id,
@@ -88,6 +111,8 @@ router.post("/", verifyToken, async (req, res, next) => {
       mood,
       note: note.slice(0, 140),
       social,
+      watchOut,
+      watchOutAt: watchOut && watchOutAt ? new Date(watchOutAt) : null,
     });
 
     await User.findByIdAndUpdate(req.payload._id, {

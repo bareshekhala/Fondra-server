@@ -56,21 +56,20 @@ router.post("/plant/:pokeId", verifyToken, async (req, res, next) => {
     }).select("x y");
 
     if (picked && planted.length >= plotCapacity) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "Your garden is full. Unpick one first to make room for a new one. ",
-        });
+      return res.status(400).json({
+        message:
+          "Your garden is full. Unpick one first to make room for a new one. ",
+      });
     }
 
     // with this way we do not let the flowers in the garden to be lost in each other :) we wanna make sure that each flower has a reasonable space
     const ASPECT = 9 / 16;
+    const minRoom = 0.1;
 
     const spotFor = (taken) => {
       let best = null;
 
-      for (let i = 0; i < 20; i += 1) {
+      for (let i = 0; i < 60; i += 1) {
         const spot = {
           x: Math.random() * 0.8 + 0.1,
           y: Math.random() * 0.32 + 0.6,
@@ -84,6 +83,10 @@ router.post("/plant/:pokeId", verifyToken, async (req, res, next) => {
 
         if (!best || room > best.room) {
           best = { ...spot, room };
+        }
+
+        if (best.room >= minRoom) {
+          break;
         }
       }
 
@@ -134,18 +137,30 @@ router.put("/:gardenItemId/picked", verifyToken, async (req, res, next) => {
       });
 
       if (inGarden >= plotCapacity) {
-        return res
-          .status(400)
-          .json({
-            message:
-              "Your garden is full. Unpick one first to make room for a new one.",
-          });
+        return res.status(400).json({
+          message:
+            "Your garden is full. Unpick one first to make room for a new one.",
+        });
       }
+    }
+
+    const update = { picked };
+
+    if (picked) {
+      const planted = await GardenItem.find({
+        user: req.payload._id,
+        picked: true,
+        _id: { $ne: req.params.gardenItemId },
+      }).select("x y");
+
+      const spot = spotFor(planted);
+      update.x = spot.x;
+      update.y = spot.y;
     }
 
     const gardenItem = await GardenItem.findOneAndUpdate(
       { _id: req.params.gardenItemId, user: req.payload._id },
-      { picked },
+      update,
       { returnDocument: "after" },
     );
 

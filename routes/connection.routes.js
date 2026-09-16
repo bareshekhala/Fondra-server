@@ -146,7 +146,7 @@ router.get("/", verifyToken, async (req, res, next) => {
       select: "username name avatar lastCheckIn checkIn location",
       populate: {
         path: "checkIn",
-        select: "mood note social createdAt",
+        select: "mood note social watchOut watchOutAt createdAt",
       },
     });
 
