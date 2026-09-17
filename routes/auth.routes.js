@@ -81,29 +81,10 @@ router.post("/signup", async (req, res, next) => {
       verifyCode: code,
       verifyCodeExpires: new Date(Date.now() + 10 * 60 * 1000),
       unverifiedExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      pendingInviteCode: inviteCode || null,
     });
 
     await sendVerificationCode(user.email, user.name, code);
-
-    // If the user joined through an invitation
-    if (inviteCode) {
-      const sender = await User.findOne({ inviteCode });
-
-      //to make sure the user did not invite herself :)
-      if (sender && String(sender._id) !== String(user._id)) {
-        // Create the Connection between them
-        const connection = await Connection.create({
-          requester: sender._id,
-          recipient: user._id,
-          status: "accepted",
-        });
-
-        await notify(sender._id, {
-          actor: user._id,
-          type: "accepted",
-        });
-      }
-    }
 
     res.sendStatus(201);
   } catch (error) {
@@ -129,6 +110,25 @@ router.post("/verify-email", async (req, res, next) => {
 
     if (!user) {
       return res.status(400).json({ message: "Wrong or expired code" });
+    }
+
+    if (user.pendingInviteCode) {
+      const sender = await User.findOne({ inviteCode: user.pendingInviteCode });
+
+      if (sender && String(sender._id) !== String(user._id)) {
+        await Connection.create({
+          requester: sender._id,
+          recipient: user._id,
+          status: "accepted",
+        });
+
+        await notify(sender._id, {
+          actor: user._id,
+          type: "accepted",
+        });
+      }
+
+      await User.findByIdAndUpdate(user._id, { pendingInviteCode: null });
     }
 
     res.status(200).json({ message: "Your email is verified" });
