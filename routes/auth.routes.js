@@ -205,6 +205,7 @@ router.post("/login", async (req, res, next) => {
     if (!foundUser.emailVerified) {
       return res.status(403).json({
         message: "Please verify your email first",
+        email: foundUser.email,
       });
     }
 
@@ -294,7 +295,6 @@ router.get("/location", verifyToken, async (req, res, next) => {
     });
   } catch (error) {
     console.log(error);
-    next(error)
 
     res.status(502).json({
       message: "Location service is temporarily unavailable",
