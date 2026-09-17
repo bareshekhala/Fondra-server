@@ -80,6 +80,7 @@ router.post("/signup", async (req, res, next) => {
       emailVerified: false,
       verifyCode: code,
       verifyCodeExpires: new Date(Date.now() + 10 * 60 * 1000),
+      unverifiedExpiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     });
 
     await sendVerificationCode(user.email, user.name, code);
@@ -117,7 +118,12 @@ router.post("/verify-email", async (req, res, next) => {
 
     const user = await User.findOneAndUpdate(
       { email, verifyCode: code, verifyCodeExpires: { $gt: new Date() } },
-      { emailVerified: true, verifyCode: null, verifyCodeExpires: null },
+      {
+        emailVerified: true,
+        verifyCode: null,
+        verifyCodeExpires: null,
+        unverifiedExpiresAt: null,
+      },
       { returnDocument: "after" },
     );
 
@@ -126,6 +132,38 @@ router.post("/verify-email", async (req, res, next) => {
     }
 
     res.status(200).json({ message: "Your email is verified" });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST -> /api/auth/resend-code
+router.post("/resend-code", async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Enter your email" });
+    }
+
+    const code = String(crypto.randomInt(0, 1000000)).padStart(6, "0");
+
+    const user = await User.findOneAndUpdate(
+      { email: email.toLowerCase(), emailVerified: false },
+      {
+        verifyCode: code,
+        verifyCodeExpires: new Date(Date.now() + 10 * 60 * 1000),
+      },
+      { returnDocument: "after" },
+    );
+
+    if (user) {
+      await sendVerificationCode(user.email, user.name, code);
+    }
+
+    res.status(200).json({
+      message: "If that email is waiting for verification, a new code is on its way",
+    });
   } catch (error) {
     next(error);
   }

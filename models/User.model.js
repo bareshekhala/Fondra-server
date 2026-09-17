@@ -40,6 +40,9 @@ const userSchema = new Schema(
     verifyCode: { type: String, default: null },
     verifyCodeExpires: { type: Date, default: null },
 
+    // we will use this to delete the user object of the user who does not verify her email after a day
+    unverifiedExpiresAt: { type: Date, default: null, index: { expires: 0 } },
+
     inviteCode: {
       type: String,
       unique: true,
