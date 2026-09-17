@@ -36,6 +36,10 @@ const userSchema = new Schema(
     avatar: { type: String, default: "" },
     avatarId: { type: String, default: "" },
 
+    emailVerified: { type: Boolean, default: true },
+    verifyCode: { type: String, default: null },
+    verifyCodeExpires: { type: Date, default: null },
+
     inviteCode: {
       type: String,
       unique: true,

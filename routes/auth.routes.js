@@ -4,11 +4,13 @@ const router = express.Router();
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const axios = require("axios");
+const crypto = require("crypto");
 const User = require("../models/User.model.js");
 const Connection = require("../models/Connection.model.js");
 
 const verifyToken = require("../middlewares/auth.middlewares");
 const { notify } = require("../middlewares/notify.js");
+const { sendVerificationCode } = require("../config/mail.js");
 
 // GET -> /api/auth/invite/:code
 // Check the invitation link
@@ -68,12 +70,19 @@ router.post("/signup", async (req, res, next) => {
 
     const passwordHash = await bcrypt.hash(password, 12);
 
+    const code = String(crypto.randomInt(0, 1000000)).padStart(6, "0");
+
     const user = await User.create({
       username,
       email,
       name,
       passwordHash,
+      emailVerified: false,
+      verifyCode: code,
+      verifyCodeExpires: new Date(Date.now() + 10 * 60 * 1000),
     });
+
+    await sendVerificationCode(user.email, user.name, code);
 
     // If the user joined through an invitation
     if (inviteCode) {
@@ -96,6 +105,27 @@ router.post("/signup", async (req, res, next) => {
     }
 
     res.sendStatus(201);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST -> /api/auth/verify-email
+router.post("/verify-email", async (req, res, next) => {
+  try {
+    const { email, code } = req.body;
+
+    const user = await User.findOneAndUpdate(
+      { email, verifyCode: code, verifyCodeExpires: { $gt: new Date() } },
+      { emailVerified: true, verifyCode: null, verifyCodeExpires: null },
+      { returnDocument: "after" },
+    );
+
+    if (!user) {
+      return res.status(400).json({ message: "Wrong or expired code" });
+    }
+
+    res.status(200).json({ message: "Your email is verified" });
   } catch (error) {
     next(error);
   }
@@ -131,6 +161,12 @@ router.post("/login", async (req, res, next) => {
     if (!passwordCorrect) {
       return res.status(400).json({
         message: "Invalid password",
+      });
+    }
+
+    if (!foundUser.emailVerified) {
+      return res.status(403).json({
+        message: "Please verify your email first",
       });
     }
 
