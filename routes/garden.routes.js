@@ -24,6 +24,38 @@ router.get("/", verifyToken, async (req, res, next) => {
 
 const plotCapacity = 15;
 
+// with this way we do not let the flowers in the garden to be lost in each other :) we wanna make sure that each flower has a reasonable space
+const ASPECT = 9 / 16;
+const minRoom = 0.1;
+
+const spotFor = (taken) => {
+  let best = null;
+
+  for (let i = 0; i < 60; i += 1) {
+    const spot = {
+      x: Math.random() * 0.8 + 0.1,
+      y: Math.random() * 0.32 + 0.6,
+    };
+
+    const room = taken.reduce((closest, other) => {
+      const dx = spot.x - other.x;
+      const dy = (spot.y - other.y) * ASPECT;
+      return Math.min(closest, Math.sqrt(dx * dx + dy * dy));
+    }, Infinity);
+
+    if (!best || room > best.room) {
+      best = { ...spot, room };
+    }
+
+    if (best.room >= minRoom) {
+      break;
+    }
+  }
+
+  return best;
+};
+
+
 //POST -> /api/garden/plant/:pokeId
 router.post("/plant/:pokeId", verifyToken, async (req, res, next) => {
   try {
@@ -61,37 +93,6 @@ router.post("/plant/:pokeId", verifyToken, async (req, res, next) => {
           "Your garden is full. Unpick one first to make room for a new one. ",
       });
     }
-
-    // with this way we do not let the flowers in the garden to be lost in each other :) we wanna make sure that each flower has a reasonable space
-    const ASPECT = 9 / 16;
-    const minRoom = 0.1;
-
-    const spotFor = (taken) => {
-      let best = null;
-
-      for (let i = 0; i < 60; i += 1) {
-        const spot = {
-          x: Math.random() * 0.8 + 0.1,
-          y: Math.random() * 0.32 + 0.6,
-        };
-
-        const room = taken.reduce((closest, other) => {
-          const dx = spot.x - other.x;
-          const dy = (spot.y - other.y) * ASPECT;
-          return Math.min(closest, Math.sqrt(dx * dx + dy * dy));
-        }, Infinity);
-
-        if (!best || room > best.room) {
-          best = { ...spot, room };
-        }
-
-        if (best.room >= minRoom) {
-          break;
-        }
-      }
-
-      return best;
-    };
 
     const spot = spotFor(planted);
 
