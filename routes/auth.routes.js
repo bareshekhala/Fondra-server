@@ -149,7 +149,7 @@ router.post("/resend-code", async (req, res, next) => {
     const code = String(crypto.randomInt(0, 1000000)).padStart(6, "0");
 
     const user = await User.findOneAndUpdate(
-      { email: email.toLowerCase(), emailVerified: false },
+      { email: email.toLowerCase() },
       {
         verifyCode: code,
         verifyCodeExpires: new Date(Date.now() + 10 * 60 * 1000),
@@ -162,8 +162,54 @@ router.post("/resend-code", async (req, res, next) => {
     }
 
     res.status(200).json({
-      message: "If that email is waiting for verification, a new code is on its way",
+      message: "If that email is registered, a new code is on its way",
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// POST -> /api/auth/reset-password
+router.post("/reset-password", async (req, res, next) => {
+  try {
+    const { email, code, password } = req.body;
+
+    if (!email || !code || !password) {
+      return res.status(400).json({ message: "Fill in every field to continue" });
+    }
+
+    const passwordRegex = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[a-zA-Z]).{8,}$/;
+
+    if (!passwordRegex.test(password)) {
+      return res.status(400).json({
+        message:
+          "Password not strong enough. Needs at least 8 characters, one uppercase, one lowercase and one number",
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    const user = await User.findOneAndUpdate(
+      {
+        email: email.toLowerCase(),
+        verifyCode: code,
+        verifyCodeExpires: { $gt: new Date() },
+      },
+      {
+        passwordHash,
+        verifyCode: null,
+        verifyCodeExpires: null,
+        emailVerified: true,
+        unverifiedExpiresAt: null,
+      },
+      { returnDocument: "after" },
+    );
+
+    if (!user) {
+      return res.status(400).json({ message: "Wrong or expired code" });
+    }
+
+    res.status(200).json({ message: "Password changed. Sign in with the new one" });
   } catch (error) {
     next(error);
   }
